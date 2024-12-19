@@ -63,6 +63,24 @@ exit:
 	return ret;
 }
 
-void print_int(const void *item) {
-    printf("%d", *(const int *)item);
+int count_str_lines(const char *str)
+{
+	int count = 0;
+	int is_empty_line = 1;
+
+	for (int i = 0; str[i] != '\0'; i++) {
+		if (str[i] == '\n') {
+			if (!is_empty_line)
+				count++;
+			is_empty_line = 1;
+		} else if (str[i] != ' ' && str[i] != '\t') {
+			is_empty_line = 0;
+		}
+	}
+
+	if (!is_empty_line)
+		count++;
+
+	return count;
 }
+

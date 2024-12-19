@@ -1,146 +1,151 @@
 #include "../helpers/helpers.h"
 #include "../helpers/vec.h"
+#include <ctype.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/cdefs.h>
 
-int count_lines(const char *str)
+int issafe(vec_t *levels)
 {
-	int count = 0;
-	int is_empty_line = 1;
+	if (vec_size(levels) < 2)
+		return 0;
 
-	for (int i = 0; str[i] != '\0'; i++) {
-		if (str[i] == '\n') {
-			if (!is_empty_line)
-				count++;
-			is_empty_line = 1;
-		} else if (str[i] != ' ' && str[i] != '\t') {
-			is_empty_line = 0;
+	int *first = (int *)vec_at(levels, 0);
+	int *second = (int *)vec_at(levels, 1);
+	/* printf("First: %d, Second: %d\n", *first, *second); */
+	int increasing = (*second > *first);
+
+	for (size_t i = 1; i < vec_size(levels); ++i) {
+		int *cur = (int *)vec_at(levels, i);
+		int *prev = (int *)vec_at(levels, i - 1);
+
+		int abs_diff = abs(*cur - *prev);
+
+		if (abs_diff < 1 || abs_diff > 3 ||
+		    (*cur > *prev) != increasing) {
+			/* printf("ERROR: %d %d %d\n", *prev, *cur, abs_diff); */
+			return 0;
 		}
 	}
 
-	if (!is_empty_line)
-		count++;
-
-	return count;
+	return 1;
 }
 
-__attribute_maybe_unused__ void solve_first_half(char *f_content)
+int issafe_with_dampener(vec_t *levels)
 {
-	int f_lines = count_lines(f_content);
+	for (size_t i = 0; i < vec_size(levels); ++i) {
+		vec_t *modified = vec_create(TYPE_INT);
 
-	char *token = NULL;
-	int num_unsafe = 0;
+		for (size_t j = 0; j < vec_size(levels); ++j) {
+			if (j != i) {
+				int value = *(int *)vec_at(levels, j);
 
-	while ((token = strsep(&f_content, "\n")) != NULL) {
-		printf("TOKEN: %s\n", token);
-		char *prev_tok = strsep(&token, " ");
-		char *next_tok = NULL;
-		int increasing = 0;
-		int decreasing = 0;
-
-		while ((next_tok = strsep(&token, " ")) != NULL) {
-			if (atoi(prev_tok) > atoi(next_tok)) {
-				if (decreasing) {
-					num_unsafe++;
-					printf("ERROR: should be increasing: %s %s\n",
-					       prev_tok, next_tok);
-					break;
-				}
-
-				if (!increasing)
-					increasing = 1;
-
-			} else if (atoi(prev_tok) < atoi(next_tok)) {
-				if (increasing) {
-					printf("ERROR: should be decreasing: %s %s\n",
-					       prev_tok, next_tok);
-					num_unsafe++;
-					break;
-				}
-
-				if (!decreasing)
-					decreasing = 1;
+				vec_push_back(modified, &value);
 			}
-
-			int diff = atoi(prev_tok) - atoi(next_tok);
-
-			if (diff > 3 || diff < -3 || diff == 0) {
-				printf("ERROR: left: %s, right: %s, diff: %d\n",
-				       prev_tok, next_tok, diff);
-				num_unsafe++;
-				break;
-			}
-
-			prev_tok = next_tok;
 		}
+
+		if (issafe(modified)) {
+			vec_destroy(modified);
+			return 1;
+		}
+
+		vec_destroy(modified);
 	}
 
-	printf("Safes: %d\n", f_lines - num_unsafe);
+	return 0;
 }
 
-void print_char(const void *item)
+void solve_second_half(char *f_content)
 {
-	printf("%c", *(char *)item);
-}
+	int num_safe = 0;
+	/* vec_t *vec = vec_create(TYPE_VEC); */
 
-void print_inner_vec(const void *item)
-{
-	vec_t *v = (vec_t *)item;
-	vec_print(v, print_char);
-}
+	char *content = strdup(f_content);
+	if (!content) {
+		perror("ERROR: Failed to allocate memory for content copy");
+		return;
+	}
 
-__attribute_maybe_unused__ void solve_second_half(char *f_content)
-{
-	int f_lines = count_lines(f_content);
-
-	char *token = NULL;
-	int num_unsafe = 0;
-	vec_t vec = vec_new(sizeof(vec_t));
-
-	while ((token = strsep(&f_content, "\n")) != NULL) {
-		char *next_tok = NULL;
-
-		if (strlen(token) == 0)
+	char *line = content;
+	while ((line = strsep(&content, "\n")) != NULL) {
+		if (strlen(line) == 0)
 			continue;
 
-		printf("TOKEN: %s, len: %lu\n", token, strlen(token));
+		vec_t *levels = vec_create(TYPE_INT);
 
-		vec_t inner_vec = vec_new(sizeof(char *));
-
-		while ((next_tok = strsep(&token, " ")) != NULL) {
-			if (strlen(next_tok) == 0)
+		char *tok = strsep(&line, " ");
+		while (tok) {
+			if (strlen(tok) == 0)
 				continue;
 
-			vec_push(&inner_vec, next_tok);
+			int num = atoi(tok);
+			vec_push_back(levels, &num);
+
+			tok = strsep(&line, " ");
 		}
 
-		vec_push(&vec, &inner_vec);
+		if (issafe(levels) || issafe_with_dampener(levels))
+			num_safe++;
+		/* vec_push_back(vec, levels); */
 	}
 
-	printf("TOKENS size: %zu\n", vec_size(&vec));
-	vec_print(&vec, print_inner_vec);
+	/* vec_print(vec); */
 
-	printf("Safes: %d\n", f_lines - num_unsafe);
+	printf("Safes: %d\n", num_safe);
 
-	vec_free(&vec);
+	/* vec_destroy(vec); */
+}
+
+void solve_first_half(char *f_content)
+{
+	int num_safe = 0;
+
+	char *content = strdup(f_content);
+	if (!content) {
+		perror("ERROR: Failed to allocate memory for content copy");
+		return;
+	}
+
+	char *line = content;
+	while ((line = strsep(&content, "\n")) != NULL) {
+		if (strlen(line) == 0)
+			continue;
+
+		vec_t *levels = vec_create(TYPE_INT);
+
+		char *tok = strsep(&line, " ");
+		while (tok) {
+			if (isdigit(tok[0]) ||
+			    (tok[0] == '-' && isdigit(tok[1]))) {
+				int num = atoi(tok);
+				vec_push_back(levels, &num);
+			}
+
+			tok = strsep(&line, " ");
+		}
+
+		if (issafe(levels))
+			num_safe++;
+	}
+
+	printf("Safes: %d\n", num_safe);
 }
 
 int main(void)
 {
 	char *f_content = NULL;
-	/* char *f_content = "A B C\nD E F\nG H I\n";  // Sample content */
 	int ret = 0;
 
-	ret = read_file("data.test", &f_content);
+	ret = read_file("data.input", &f_content);
 	if (ret < 0) {
 		perror("Failed to read file");
 		return 1;
 	}
 
-	/* solve_first_half(f_content); */
+	solve_first_half(f_content);
 	solve_second_half(f_content);
+
 	free(f_content);
 
 	return 0;

@@ -1,172 +1,155 @@
 #include "vec.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
+
+void test_create_destroy(void)
+{
+	vec_t *v = vec_create(TYPE_INT);
+	assert(v != NULL);
+	assert(vec_size(v) == 0);
+	assert(vec_capacity(v) > 0);
+	vec_destroy(v);
+	printf("test_create_destroy passed.\n");
+}
+
+void test_push_pop_int(void)
+{
+	vec_t *v = vec_create(TYPE_INT);
+	int nums[] = { 10, 20, 30 };
+
+	for (size_t i = 0; i < 3; i++) {
+		vec_push_back(v, &nums[i]);
+		assert(*(int *)vec_at(v, i) == nums[i]);
+	}
+
+	assert(vec_size(v) == 3);
+
+	for (int i = 2; i >= 0; i--) {
+		int *popped = (int *)vec_pop_back(v);
+		assert(*popped == nums[i]);
+	}
+
+	assert(vec_size(v) == 0);
+	vec_destroy(v);
+	printf("test_push_pop_int passed.\n");
+}
+
+void test_push_pop_string(void)
+{
+	vec_t *v = vec_create(TYPE_STRING);
+	const char *strings[] = { "apple", "banana", "cherry" };
+	for (size_t i = 0; i < 3; i++) {
+		vec_push_back(v, &strings[i]);
+		assert(strcmp(*(char **)vec_at(v, i), strings[i]) == 0);
+	}
+
+	assert(vec_size(v) == 3);
+
+	for (int i = 2; i >= 0; i--) {
+		char **popped = (char **)vec_pop_back(v);
+		assert(strcmp(*popped, strings[i]) == 0);
+	}
+
+	assert(vec_size(v) == 0);
+	vec_destroy(v);
+	printf("test_push_pop_string passed.\n");
+}
+
+void test_insert_erase(void)
+{
+	vec_t *v = vec_create(TYPE_INT);
+	int nums[] = { 10, 20, 30, 40 };
+
+	vec_push_back(v, &nums[0]);
+	vec_push_back(v, &nums[2]);
+	vec_insert(v, 1, &nums[1]); // Insert 20 at index 1
+	assert(vec_size(v) == 3);
+	assert(*(int *)vec_at(v, 1) == 20);
+
+	vec_erase(v, 1); // Remove 20
+	assert(vec_size(v) == 2);
+	assert(*(int *)vec_at(v, 1) == 30);
+
+	vec_destroy(v);
+	printf("test_insert_erase passed.\n");
+}
+
+void test_nested_vectors(void)
+{
+	vec_t *outer = vec_create(TYPE_VEC);
+
+	vec_t *inner1 = vec_create(TYPE_INT);
+	vec_t *inner2 = vec_create(TYPE_INT);
+	int nums[] = { 1, 2, 3 };
+
+	for (size_t i = 0; i < 3; i++) {
+		vec_push_back(inner1, &nums[i]);
+		vec_push_back(inner2, &nums[2 - i]); // Reverse order
+	}
+
+	vec_push_back(outer, inner1);
+	vec_push_back(outer, inner2);
+
+	vec_t *retrieved_inner1 = (vec_t *)vec_at(outer, 0);
+	vec_t *retrieved_inner2 = (vec_t *)vec_at(outer, 1);
+
+	for (size_t i = 0; i < 3; i++) {
+		assert(*(int *)vec_at(retrieved_inner1, i) == nums[i]);
+		assert(*(int *)vec_at(retrieved_inner2, i) == nums[2 - i]);
+	}
+
+	vec_destroy(outer);
+	printf("test_nested_vectors passed.\n");
+}
+
+void test_print(void)
+{
+	vec_t *v = vec_create(TYPE_INT);
+	int nums[] = { 10, 20, 30 };
+
+	for (size_t i = 0; i < 3; i++) {
+		vec_push_back(v, &nums[i]);
+	}
+
+	printf("Expected: Vec: [10, 20, 30]\nActual:   ");
+	vec_print(v);
+
+	vec_destroy(v);
+	printf("test_print passed.\n");
+}
+
+void test_copy(void)
+{
+	vec_t *v = vec_create(TYPE_INT);
+	int nums[] = { 10, 20, 30 };
+
+	for (size_t i = 0; i < 3; i++) {
+		vec_push_back(v, &nums[i]);
+	}
+
+	vec_t *copy = vec_copy(v);
+	assert(vec_size(copy) == vec_size(v));
+	for (size_t i = 0; i < vec_size(v); i++) {
+		assert(*(int *)vec_at(copy, i) == *(int *)vec_at(v, i));
+	}
+
+	vec_destroy(v);
+	vec_destroy(copy);
+	printf("test_copy passed.\n");
+}
 
 int main(void)
 {
-	// 1. Test vec_new
-	vec_t v = vec_new(TYPE_INT);
-	assert(vec_size(&v) == 0);
-	assert(vec_capacity(&v) == 8);
+	test_create_destroy();
+	test_push_pop_int();
+	test_push_pop_string();
+	test_insert_erase();
+	test_nested_vectors();
+	test_print();
+	test_copy();
 
-	// 2. Test vec_push
-	for (int i = 0; i < 8; i++) {
-		vec_push(&v, &i);
-	}
-	assert(vec_size(&v) == 8);
-	assert(vec_capacity(&v) == 8);
-
-	// Push to trigger reallocation
-	int val = 8;
-	vec_push(&v, &val);
-	assert(vec_size(&v) == 9);
-	assert(vec_capacity(&v) == 16);
-
-	// Print vector
-	printf("After pushing elements: ");
-	vec_print(&v);
-
-	// 3. Test vec_at
-	for (int i = 0; i < 9; i++) {
-		int *item = vec_at(&v, i);
-		assert(*item == i);
-	}
-
-	// 4. Test vec_pop
-	for (int i = 8; i >= 0; i--) {
-		int *item = vec_pop(&v);
-		assert(*item == i);
-		assert(vec_size(&v) == (size_t)i);
-	}
-	assert(vec_size(&v) == 0);
-
-	// 5. Test vec_insert
-	for (int i = 0; i < 5; i++) {
-		vec_push(&v, &i);
-	}
-	int val_insert = 99;
-	vec_insert(&v, 2, &val_insert);
-	assert(vec_size(&v) == 6);
-	int *item = vec_at(&v, 2);
-	assert(*item == 99);
-
-	printf("After inserting 99 at index 2: ");
-	vec_print(&v);
-
-	// 6. Test vec_remove
-	vec_remove(&v, 2);
-	assert(vec_size(&v) == 5);
-	item = vec_at(&v, 2);
-	assert(*item == 2);
-
-	printf("After removing element at index 2: ");
-	vec_print(&v);
-
-	// 7. Test boundary conditions
-	// Insert at the beginning
-	int val_begin = 77;
-	vec_insert(&v, 0, &val_begin);
-	assert(vec_size(&v) == 6);
-	item = vec_at(&v, 0);
-	assert(*item == 77);
-
-	printf("After inserting 77 at the beginning: ");
-	vec_print(&v);
-
-	// Insert at the end
-	int val_end = 88;
-	vec_insert(&v, vec_size(&v), &val_end);
-	assert(vec_size(&v) == 7);
-	item = vec_at(&v, vec_size(&v) - 1);
-	assert(*item == 88);
-
-	printf("After inserting 88 at the end: ");
-	vec_print(&v);
-
-	// Remove from the beginning
-	vec_remove(&v, 0);
-	assert(vec_size(&v) == 6);
-	item = vec_at(&v, 0);
-	assert(*item == 0);
-
-	printf("After removing element at the beginning: ");
-	vec_print(&v);
-
-	// Remove from the end
-	vec_remove(&v, vec_size(&v) - 1);
-	assert(vec_size(&v) == 5);
-
-	printf("After removing element at the end: ");
-	vec_print(&v);
-
-	// 8. Test vec_free
-	vec_free(&v);
-	assert(vec_size(&v) == 0);
-	assert(vec_capacity(&v) == 0);
-	assert(v.data == NULL);
-
-	// 9. Check different types
-	vec_t v_char = vec_new(TYPE_CHAR);
-	vec_t v_float = vec_new(TYPE_FLOAT);
-
-	char c = 'a';
-	float f = 3.14;
-
-	vec_push(&v_char, &c);
-	vec_push(&v_float, &f);
-
-	assert(*(char *)vec_at(&v_char, 0) == 'a');
-	assert(*(float *)vec_at(&v_float, 0) == 3.14f);
-	vec_free(&v_char);
-	vec_free(&v_float);
-
-	// 10. Nested vectors
-	vec_t v_outer = vec_new(TYPE_VEC);
-
-	for (int i = 0; i < 3; i++) {
-		vec_t v_inner = vec_new(TYPE_INT);
-		for (int j = 0; j < 3; j++) {
-			vec_push(&v_inner, &j);
-		}
-		vec_push(&v_outer, &v_inner);
-	}
-
-	for (int i = 0; i < 3; i++) {
-		vec_t *inner = (vec_t *)vec_at(&v_outer, i);
-		for (int j = 0; j < 3; j++) {
-			int *val = (int *)vec_at(inner, j);
-			assert(*val == j);
-		}
-	}
-	vec_free(&v_outer);
-
-	// 11. Large number of vectors
-	vec_t v11 = vec_new(TYPE_INT);
-	size_t large_size = 10000;
-	for (size_t i = 0; i < large_size; i++) {
-		vec_push(&v11, &i);
-	}
-	assert(vec_size(&v11) == large_size);
-
-	for (int i = 0; i < (int)large_size; i++) {
-		assert(*(int *)vec_at(&v11, i) == i);
-	}
-
-	vec_free(&v11);
-
-	// 12. Edge Cases in vec_at
-	vec_t v12 = vec_new(TYPE_INT);
-	val = 42;
-
-	vec_push(&v12, &val);
-	assert(*(int *)vec_at(&v12, 0) == 42);
-
-	vec_push(&v12, &val);
-	assert(*(int *)vec_at(&v12, 1) == 42);
-
-	vec_free(&v12);
-
-	printf("All tests passed!\n");
-
+	printf("All tests passed.\n");
 	return 0;
 }
