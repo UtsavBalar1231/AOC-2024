@@ -1,0 +1,29 @@
+Input: 
+Expected: 0
+
+Input: do()mul(3,3)mul(4,4)don't()
+Expected: 25
+
+Input: don't()do()mul(3,3)mul(4,4)don't()
+Expected: 25
+
+Input: 
+Expected: 0
+
+Input: abc!@#do()xyzdon't()123
+Expected: 0
+
+Input: do()don't()do()don't()
+Expected: 0
+
+Input: mul(1)do()mul(2,3,4)don't()mul(a,b)
+Expected: 0
+
+Input: mul(2,2)don't()do()mul(3,3)
+Expected: 13
+
+Input: do()mul(2,2)don't()don't()mul(3,3)do()mul(4,4)
+Expected: 20
+
+Input: do()do()mul(2,2)don't()mul(3,3)
+Expected: 4

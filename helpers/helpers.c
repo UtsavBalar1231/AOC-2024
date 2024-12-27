@@ -50,7 +50,7 @@ int read_file(const char *f_name, char **f_content)
 	}
 
 	memcpy(*f_content, mapped, sb.st_size);
-	(*f_content)[sb.st_size] = '\0';
+	/* (*f_content)[sb.st_size] = '\0'; */
 
 	munmap(mapped, sb.st_size);
 	goto release_fd;
@@ -84,3 +84,45 @@ int count_str_lines(const char *str)
 	return count;
 }
 
+char *strsplit_r(char *s, const char *delim, char **save_ptr)
+{
+	if (s == NULL)
+		s = *save_ptr;
+
+	if (s == NULL || *s == '\0') {
+		*save_ptr = NULL;
+		return NULL;
+	}
+
+	size_t delim_len = strlen(delim);
+
+	if (delim_len == 0) {
+		*save_ptr = s + strlen(s);
+		return s;
+	}
+
+	if (delim_len == 1) {
+		s += strspn(s, delim);
+	} else {
+		while (strstr(s, delim) == s)
+			s += delim_len;
+	}
+
+	if (*s == '\0') {
+		*save_ptr = NULL;
+		return NULL;
+	}
+
+	// Find the end of the token
+	char *end = strstr(s, delim);
+
+	if (end == NULL) {
+		*save_ptr = s + strlen(s);
+		return s;
+	}
+
+	// Terminate the token and update save_ptr
+	*end = '\0';
+	*save_ptr = end + delim_len;
+	return s;
+}
